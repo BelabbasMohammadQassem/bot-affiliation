@@ -7,11 +7,9 @@ import os
 from urllib.parse import urlparse, parse_qs
 
 class AmazonAffiliateBot(commands.Bot):
-    def __init__(self,  **kwargs):
+    def __init__(self, **kwargs):
+        # Suppression de la double initialisation
         super().__init__(**kwargs)
-        intents = discord.Intents.default()
-        intents.message_content = True
-        super().__init__(command_prefix="!", intents=intents)
         
         self.affiliate_tag = os.getenv('AFFILIATE_TAG')
         self.shortener = pyshorteners.Shortener()
