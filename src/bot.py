@@ -31,18 +31,10 @@ class AmazonAffiliateBot(commands.Bot):
         try:
             session = requests.Session()
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
-            response = session.get(url, headers=headers, allow_redirects=True, timeout=10)
-            final_url = response.url
-            print(f"URL finale après déroulage : {final_url}")
-            return final_url
+            response = session.get(url, headers=headers, allow_redirects=True, timeout=5)
+            return response.url
         except Exception as e:
             print(f"Erreur lors du déroulage de l'URL : {e}")
             return url
@@ -61,7 +53,7 @@ class AmazonAffiliateBot(commands.Bot):
         return None
 
     def create_short_amazon_url(self, product_id):
-        return f"https://amzn.eu/d/{product_id}"
+        return f"https://amzn.to/{product_id}"
 
     async def on_ready(self):
         print(f'{self.user} est connecté et prêt!')
@@ -75,30 +67,26 @@ class AmazonAffiliateBot(commands.Bot):
             try:
                 print(f"URL Amazon détectée : {amazon_url}")
                 
-                unshortened_url = self.unshorten_url(amazon_url)
-                print(f"URL déroulée : {unshortened_url}")
+                # Si c'est déjà un lien court, on le déroule
+                if 'amzn.to' in amazon_url or 'amzn.eu' in amazon_url:
+                    amazon_url = self.unshorten_url(amazon_url)
                 
-                product_id = self.get_product_id(unshortened_url)
+                product_id = self.get_product_id(amazon_url)
                 if product_id:
+                    # Création du lien court au format amzn.to
                     short_url = self.create_short_amazon_url(product_id)
                     print(f"URL courte générée : {short_url}")
-                    
-                    if '?tag=' not in short_url:
-                        affiliate_url = f"{short_url}?tag={self.affiliate_tag}"
-                    else:
-                        affiliate_url = short_url.split('?tag=')[0] + f"?tag={self.affiliate_tag}"
-                    print(f"URL avec affiliation : {affiliate_url}")
                     
                     author_name = message.author.display_name
                     
                     try:
                         await message.delete()
                         await message.channel.send(
-                            f"💫 **{author_name}** a partagé : {affiliate_url}"
+                            f"💫 **{author_name}** a partagé : {short_url}"
                         )
                     except discord.Forbidden:
                         await message.channel.send(
-                            f"🛒 Voici le lien affilié : {affiliate_url}"
+                            f"🛒 Voici le lien : {short_url}"
                         )
                 else:
                     print("Impossible d'extraire l'ID du produit")
