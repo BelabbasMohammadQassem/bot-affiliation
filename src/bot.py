@@ -53,7 +53,7 @@ class AmazonAffiliateBot(commands.Bot):
         return None
 
     def create_short_amazon_url(self, product_id):
-        return f"https://amzn.to/{product_id}"
+        return f"https://www.amazon.fr/dp/{product_id}"
 
     async def on_ready(self):
         print(f'{self.user} est connecté et prêt!')
