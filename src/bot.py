@@ -53,8 +53,9 @@ class AmazonAffiliateBot(commands.Bot):
         return None
 
     def create_short_amazon_url(self, product_id):
-    # Format court avec tag d'affiliation
-        return f"https://amzn.eu/d/{product_id}?tag={self.affiliate_tag}"
+    # Format pour Amazon France avec tag d'affiliation
+        return f"https://www.amazon.fr/dp/{product_id}?tag={self.affiliate_tag}"
+
 
     async def on_ready(self):
         print(f'{self.user} est connecté et prêt!')
