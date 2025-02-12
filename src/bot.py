@@ -13,19 +13,19 @@ class AmazonAffiliateBot(commands.Bot):
     async def setup_hook(self):
         print("Bot is setting up...")
 
-    def extract_amazon_url(self, content):
+    def extract_amazon_urls(self, content):  # Notez le pluriel dans le nom
         patterns = [
             r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/[^\s]+',
             r'https?://amzn\.(?:to|eu)/[^\s]+',
             r'https?://a\.co/d/[^\s]+',
             r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/(?:dp|gp/product)/[A-Z0-9]+/?[^\s]*'
         ]
-            
+        
+        urls = []
         for pattern in patterns:
             matches = re.finditer(pattern, content)
-            for match in matches:
-                return match.group(0)
-        return None
+            urls.extend(match.group(0) for match in matches)
+        return urls
 
     def unshorten_url(self, url):
         try:
@@ -53,9 +53,7 @@ class AmazonAffiliateBot(commands.Bot):
         return None
 
     def create_short_amazon_url(self, product_id):
-    # Format pour Amazon France avec tag d'affiliation
         return f"https://www.amazon.fr/dp/{product_id}?tag={self.affiliate_tag}"
-
 
     async def on_ready(self):
         print(f'{self.user} est connecté et prêt!')
@@ -64,36 +62,39 @@ class AmazonAffiliateBot(commands.Bot):
         if message.author == self.user:
             return
 
-        amazon_url = self.extract_amazon_url(message.content)
-        if amazon_url:
+        amazon_urls = self.extract_amazon_urls(message.content)
+        if amazon_urls:
             try:
-                print(f"URL Amazon détectée : {amazon_url}")
+                affiliate_links = []
                 
-                # Si c'est déjà un lien court, on le déroule
-                if 'amzn.to' in amazon_url or 'amzn.eu' in amazon_url:
-                    amazon_url = self.unshorten_url(amazon_url)
-                
-                product_id = self.get_product_id(amazon_url)
-                if product_id:
-                    # Création du lien court au format amzn.to
-                    short_url = self.create_short_amazon_url(product_id)
-                    print(f"URL courte générée : {short_url}")
+                for amazon_url in amazon_urls:
+                    print(f"URL Amazon détectée : {amazon_url}")
                     
+                    # Si c'est déjà un lien court, on le déroule
+                    if 'amzn.to' in amazon_url or 'amzn.eu' in amazon_url:
+                        amazon_url = self.unshorten_url(amazon_url)
+                    
+                    product_id = self.get_product_id(amazon_url)
+                    if product_id:
+                        short_url = self.create_short_amazon_url(product_id)
+                        affiliate_links.append(short_url)
+                        print(f"URL courte générée : {short_url}")
+                
+                if affiliate_links:
                     author_name = message.author.display_name
+                    links_message = "\n".join(affiliate_links)
                     
                     try:
                         await message.delete()
                         await message.channel.send(
-                            f"💫 **{author_name}** a partagé : {short_url}"
+                            f"💫 **{author_name}** a partagé :\n{links_message}"
                         )
                     except discord.Forbidden:
                         await message.channel.send(
-                            f"🛒 Voici le lien : {short_url}"
+                            f"🛒 Voici les liens :\n{links_message}"
                         )
-                else:
-                    print("Impossible d'extraire l'ID du produit")
-                    
+                        
             except Exception as e:
-                print(f"Erreur lors du traitement du lien : {e}")
+                print(f"Erreur lors du traitement des liens : {e}")
         else:
             await self.process_commands(message)
