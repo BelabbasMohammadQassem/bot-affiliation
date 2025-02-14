@@ -18,9 +18,12 @@ class AmazonAffiliateBot(commands.Bot):
             r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/[^\s\.,!?]+',  # Ajout de \.,!? 
             r'https?://amzn\.(?:to|eu)/[^\s\.,!?]+',
             r'https?://a\.co/d/[^\s\.,!?]+',
-            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/(?:dp|gp/product)/[A-Z0-9]+/?[^\s\.,!?]*'
+            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/(?:dp|gp/product)/[A-Z0-9]+/?[^\s\.,!?]*',
         ]
-    
+         # Utiliser une regex plus permissive pour capturer tous les liens Amazon
+        amazon_regex = r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)(?:/[^\s]*)?'
+        urls = re.findall(amazon_regex, content)
+        return urls if urls else []
         urls = []
         for pattern in patterns:
             matches = re.finditer(pattern, content)
@@ -41,6 +44,32 @@ class AmazonAffiliateBot(commands.Bot):
             return url
 
     def get_product_id(self, url):
+    try:
+        # Si l'URL contient "mission" ou d'autres mots-clés non-produit, on ignore
+        if any(keyword in url.lower() for keyword in ['mission', 'hz/mobile']):
+            print(f"URL ignorée car ce n'est pas un lien de produit : {url}")
+            return None
+            
+        # Patterns possibles pour les IDs de produits
+        patterns = [
+            r'/dp/([A-Z0-9]{10})',
+            r'/gp/product/([A-Z0-9]{10})',
+            r'/product/([A-Z0-9]{10})',
+            r'(?<=/)[A-Z0-9]{10}(?=/|$)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+                
+        print(f"Aucun ID de produit trouvé dans l'URL : {url}")
+        return None
+        
+    except Exception as e:
+        print(f"Erreur lors de l'extraction de l'ID du produit : {e}")
+        return None
+        
         patterns = [
             r'/dp/([A-Z0-9]{10})',
             r'/gp/product/([A-Z0-9]{10})',
