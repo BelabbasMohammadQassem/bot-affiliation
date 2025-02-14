@@ -14,25 +14,22 @@ class AmazonAffiliateBot(commands.Bot):
         print("Bot is setting up...")
 
     def extract_amazon_urls(self, content):
+        # Premièrement, extraire toutes les URLs potentielles avec la ponctuation
         patterns = [
-            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/[^\s\.,!?]+',  # Ajout de \.,!? 
-            r'https?://amzn\.(?:to|eu)/[^\s\.,!?]+',
-            r'https?://a\.co/d/[^\s\.,!?]+',
-            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/(?:dp|gp/product)/[A-Z0-9]+/?[^\s\.,!?]*',
+            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/[^\s]+',
+            r'https?://amzn\.(?:to|eu)/[^\s]+',
+            r'https?://a\.co/d/[^\s]+',
         ]
-        try:  # Cette ligne et les suivantes doivent être indentées
-            amazon_regex = r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)(?:/[^\s]*)?'
-            urls = re.findall(amazon_regex, content)
-            return urls if urls else []
-        except Exception as e:
-            print(f"Erreur lors de l'extraction des URLs : {e}")
-            return []
 
+        urls = []
         for pattern in patterns:
             matches = re.finditer(pattern, content)
-            urls.extend(match.group(0) for match in matches)
+            for match in matches:
+                # Nettoyer l'URL en retirant la ponctuation finale
+                url = match.group(0).rstrip('.,!?;:')
+                urls.append(url)
+        
         return urls
-
 
     def unshorten_url(self, url):
         try:
@@ -48,6 +45,9 @@ class AmazonAffiliateBot(commands.Bot):
 
     def get_product_id(self, url):
         try:
+            # Nettoyer l'URL de la ponctuation finale avant de chercher l'ID
+            url = url.rstrip('.,!?;:')
+            
             if any(keyword in url.lower() for keyword in ['mission', 'hz/mobile']):
                 print(f"URL ignorée car ce n'est pas un lien de produit : {url}")
                 return None
@@ -56,32 +56,21 @@ class AmazonAffiliateBot(commands.Bot):
                 r'/dp/([A-Z0-9]{10})',
                 r'/gp/product/([A-Z0-9]{10})',
                 r'/product/([A-Z0-9]{10})',
-                r'(?<=/)[A-Z0-9]{10}(?=/|$)'
+                r'(?<=/)[A-Z0-9]{10}(?=/|$)',
+                r'/d/([A-Z0-9]{10})'
             ]
         
             for pattern in patterns:
                 match = re.search(pattern, url)
                 if match:
                     return match.group(1)
-                
+            
             print(f"Aucun ID de produit trouvé dans l'URL : {url}")
             return None
-        
+            
         except Exception as e:
             print(f"Erreur lors de l'extraction de l'ID du produit : {e}")
             return None
-
-        patterns = [
-            r'/dp/([A-Z0-9]{10})',
-            r'/gp/product/([A-Z0-9]{10})',
-            r'/d/([A-Z0-9]{10})'
-        ]
-        
-        for pattern in patterns:
-            match = re.search(pattern, url)
-            if match:
-                return match.group(1)
-        return None
 
     def create_short_amazon_url(self, product_id):
         return f"https://www.amazon.fr/dp/{product_id}?tag={self.affiliate_tag}"
@@ -93,7 +82,7 @@ class AmazonAffiliateBot(commands.Bot):
         if message.author == self.user:
             return
 
-        amazon_urls = self.extract_amazon_urls(message.content)  # Aligné avec le if précédent
+        amazon_urls = self.extract_amazon_urls(message.content)
         if amazon_urls:
             try:
                 affiliate_links = []
@@ -115,25 +104,18 @@ class AmazonAffiliateBot(commands.Bot):
                     author_name = message.author.display_name
                     links_message = "\n".join(affiliate_links)
                     
-                    # Essayons d'abord de supprimer le message
                     try:
                         await message.delete()
                         print("Message original supprimé avec succès")
-                    except discord.Forbidden:
-                        print("Pas la permission de supprimer le message")
-                    except discord.NotFound:
-                        print("Message introuvable")
-                    except Exception as e:
+                    except (discord.Forbidden, discord.NotFound, Exception) as e:
                         print(f"Erreur lors de la suppression du message : {e}")
                     
-                    # Ensuite, envoyons le nouveau message
                     try:
                         await message.channel.send(
                             f"💫 **{author_name}** a partagé :\n{links_message}"
                         )
                     except Exception as e:
                         print(f"Erreur lors de l'envoi du nouveau message : {e}")
-                        # Si on ne peut pas envoyer le message formaté, on essaie une version plus simple
                         await message.channel.send(
                             f"🛒 Voici les liens :\n{links_message}"
                         )
@@ -142,6 +124,3 @@ class AmazonAffiliateBot(commands.Bot):
                 print(f"Erreur lors du traitement des liens : {e}")
         else:
             await self.process_commands(message)
-
-
-
