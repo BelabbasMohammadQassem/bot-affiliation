@@ -13,19 +13,20 @@ class AmazonAffiliateBot(commands.Bot):
     async def setup_hook(self):
         print("Bot is setting up...")
 
-    def extract_amazon_urls(self, content):  # Notez le pluriel dans le nom
+    def extract_amazon_urls(self, content):
         patterns = [
-            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/[^\s]+',
-            r'https?://amzn\.(?:to|eu)/[^\s]+',
-            r'https?://a\.co/d/[^\s]+',
-            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/(?:dp|gp/product)/[A-Z0-9]+/?[^\s]*'
+            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/[^\s\.,!?]+',  # Ajout de \.,!? 
+            r'https?://amzn\.(?:to|eu)/[^\s\.,!?]+',
+            r'https?://a\.co/d/[^\s\.,!?]+',
+            r'https?://(?:www\.)?amazon\.(?:com|fr|co\.uk|de|it|es)/(?:dp|gp/product)/[A-Z0-9]+/?[^\s\.,!?]*'
         ]
-        
+    
         urls = []
         for pattern in patterns:
             matches = re.finditer(pattern, content)
             urls.extend(match.group(0) for match in matches)
         return urls
+
 
     def unshorten_url(self, url):
         try:
