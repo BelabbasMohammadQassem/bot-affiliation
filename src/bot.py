@@ -59,11 +59,11 @@ class AmazonAffiliateBot(commands.Bot):
     async def on_ready(self):
         print(f'{self.user} est connecté et prêt!')
 
-   async def on_message(self, message):
+    async def on_message(self, message):
         if message.author == self.user:
             return
 
-            amazon_urls = self.extract_amazon_urls(message.content)
+           amazon_urls = self.extract_amazon_urls(message.content)  # Cette ligne doit être au même niveau que le if précédent
             if amazon_urls:
                 try:
                     affiliate_links = []
