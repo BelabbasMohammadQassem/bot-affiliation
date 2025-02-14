@@ -63,54 +63,55 @@ class AmazonAffiliateBot(commands.Bot):
         if message.author == self.user:
             return
 
-           amazon_urls = self.extract_amazon_urls(message.content)  # Cette ligne doit être au même niveau que le if précédent
-            if amazon_urls:
-                try:
-                    affiliate_links = []
+        amazon_urls = self.extract_amazon_urls(message.content)  # Aligné avec le if précédent
+        if amazon_urls:
+            try:
+                affiliate_links = []
+                
+                for amazon_url in amazon_urls:
+                    print(f"URL Amazon détectée : {amazon_url}")
                     
-                    for amazon_url in amazon_urls:
-                        print(f"URL Amazon détectée : {amazon_url}")
-                        
-                        # Si c'est déjà un lien court, on le déroule
-                        if 'amzn.to' in amazon_url or 'amzn.eu' in amazon_url:
-                            amazon_url = self.unshorten_url(amazon_url)
-                        
-                        product_id = self.get_product_id(amazon_url)
-                        if product_id:
-                            short_url = self.create_short_amazon_url(product_id)
-                            affiliate_links.append(short_url)
-                            print(f"URL courte générée : {short_url}")
+                    # Si c'est déjà un lien court, on le déroule
+                    if 'amzn.to' in amazon_url or 'amzn.eu' in amazon_url:
+                        amazon_url = self.unshorten_url(amazon_url)
                     
-                    if affiliate_links:
-                        author_name = message.author.display_name
-                        links_message = "\n".join(affiliate_links)
-                        
-                        # Essayons d'abord de supprimer le message
-                        try:
-                            await message.delete()
-                            print("Message original supprimé avec succès")
-                        except discord.Forbidden:
-                            print("Pas la permission de supprimer le message")
-                        except discord.NotFound:
-                            print("Message introuvable")
-                        except Exception as e:
-                            print(f"Erreur lors de la suppression du message : {e}")
-                        
-                        # Ensuite, envoyons le nouveau message
-                        try:
-                            await message.channel.send(
-                                f"💫 **{author_name}** a partagé :\n{links_message}"
-                            )
-                        except Exception as e:
-                            print(f"Erreur lors de l'envoi du nouveau message : {e}")
-                            # Si on ne peut pas envoyer le message formaté, on essaie une version plus simple
-                            await message.channel.send(
-                                f"🛒 Voici les liens :\n{links_message}"
-                            )
+                    product_id = self.get_product_id(amazon_url)
+                    if product_id:
+                        short_url = self.create_short_amazon_url(product_id)
+                        affiliate_links.append(short_url)
+                        print(f"URL courte générée : {short_url}")
+                
+                if affiliate_links:
+                    author_name = message.author.display_name
+                    links_message = "\n".join(affiliate_links)
+                    
+                    # Essayons d'abord de supprimer le message
+                    try:
+                        await message.delete()
+                        print("Message original supprimé avec succès")
+                    except discord.Forbidden:
+                        print("Pas la permission de supprimer le message")
+                    except discord.NotFound:
+                        print("Message introuvable")
+                    except Exception as e:
+                        print(f"Erreur lors de la suppression du message : {e}")
+                    
+                    # Ensuite, envoyons le nouveau message
+                    try:
+                        await message.channel.send(
+                            f"💫 **{author_name}** a partagé :\n{links_message}"
+                        )
+                    except Exception as e:
+                        print(f"Erreur lors de l'envoi du nouveau message : {e}")
+                        # Si on ne peut pas envoyer le message formaté, on essaie une version plus simple
+                        await message.channel.send(
+                            f"🛒 Voici les liens :\n{links_message}"
+                        )
                         
             except Exception as e:
                 print(f"Erreur lors du traitement des liens : {e}")
         else:
             await self.process_commands(message)
+
 
 
