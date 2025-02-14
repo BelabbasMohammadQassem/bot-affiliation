@@ -60,8 +60,8 @@ class AmazonAffiliateBot(commands.Bot):
         print(f'{self.user} est connecté et prêt!')
 
    async def on_message(self, message):
-            if message.author == self.user:
-                return
+        if message.author == self.user:
+            return
 
             amazon_urls = self.extract_amazon_urls(message.content)
             if amazon_urls:
