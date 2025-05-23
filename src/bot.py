@@ -90,26 +90,23 @@ class AmazonAffiliateBot(commands.Bot):
         try:
             # Nettoie l'URL
             url = url.rstrip('.,!?;:')
-            url = url.split('?')[0]
             
-            # Liste des patterns à ignorer (pages non-produits)
-            ignored_patterns = [
-                'mission', 'hz/mobile', 'signin', 'register',
-                'ap/', 'ref=', 'ref_=', 'deals', 'gp/browse',
-                'gp/goldbox'
-            ]
+            print(f"🔍 Analyse de l'URL : {url}")
             
-            # Vérifie si l'URL contient un pattern à ignorer
-            if any(pattern in url.lower() for pattern in ignored_patterns):
-                print(f"URL ignorée car ce n'est pas un lien de produit : {url}")
-                return None
+            # Vérifie d'abord si c'est bien un lien produit avec /dp/
+            if '/dp/' in url:
+                # Extrait l'ID du produit après /dp/
+                match = re.search(r'/dp/([A-Z0-9]{10})', url)
+                if match:
+                    product_id = match.group(1)
+                    print(f"✅ ID produit trouvé : {product_id}")
+                    return product_id
             
-            # Patterns pour extraire l'ID du produit
+            # Autres patterns pour les formats alternatifs
             patterns = [
-                r'/dp/([A-Z0-9]{10})',
                 r'/gp/product/([A-Z0-9]{10})',
                 r'/product/([A-Z0-9]{10})',
-                r'(?<=/)[A-Z0-9]{10}(?=/|$)',
+                r'/ASIN/([A-Z0-9]{10})',
                 r'/d/([A-Z0-9]{10})'
             ]
         
@@ -117,12 +114,15 @@ class AmazonAffiliateBot(commands.Bot):
             for pattern in patterns:
                 match = re.search(pattern, url)
                 if match:
-                    return match.group(1)
+                    product_id = match.group(1)
+                    print(f"✅ ID produit trouvé avec pattern {pattern} : {product_id}")
+                    return product_id
             
+            print(f"❌ Aucun ID produit trouvé dans : {url}")
             return None
             
         except Exception as e:
-            print(f"Erreur lors de l'extraction de l'ID du produit : {e}")
+            print(f"❌ Erreur lors de l'extraction de l'ID du produit : {e}")
             return None
 
     def create_short_amazon_url(self, product_id):
@@ -139,7 +139,8 @@ class AmazonAffiliateBot(commands.Bot):
 
     async def on_ready(self):
         """Appelé quand le bot est prêt et connecté"""
-        print(f'{self.user} est connecté et prêt!')
+        print(f'✅ {self.user} est connecté et prêt!')
+        print(f'🏷️ Tag d\'affiliation : {self.affiliate_tag}')
 
     async def on_message(self, message):
         """
@@ -161,18 +162,22 @@ class AmazonAffiliateBot(commands.Bot):
                 
                 # Traite chaque URL trouvée
                 for amazon_url in amazon_urls:
-                    print(f"URL Amazon détectée : {amazon_url}")
+                    print(f"🔗 URL Amazon détectée : {amazon_url}")
                     
                     # Déroule les liens courts
                     if any(domain in amazon_url for domain in ['amzn.to', 'amzn.eu', 'a.co']):
+                        print(f"🔄 Déroulage du lien court...")
                         amazon_url = self.unshorten_url(amazon_url)
+                        print(f"🔗 URL déroulée : {amazon_url}")
                     
                     # Génère le lien d'affiliation
                     product_id = self.get_product_id(amazon_url)
                     if product_id:
                         short_url = self.create_short_amazon_url(product_id)
                         affiliate_links.append(short_url)
-                        print(f"URL courte générée : {short_url}")
+                        print(f"🎯 Lien d'affiliation généré : {short_url}")
+                    else:
+                        print(f"⚠️ Impossible de traiter l'URL : {amazon_url}")
                 
                 # Si des liens ont été générés, envoie le message formaté
                 if affiliate_links:
@@ -182,24 +187,27 @@ class AmazonAffiliateBot(commands.Bot):
                     # Supprime le message original
                     try:
                         await message.delete()
-                        print("Message original supprimé avec succès")
+                        print("🗑️ Message original supprimé avec succès")
                     except (discord.Forbidden, discord.NotFound, Exception) as e:
-                        print(f"Erreur lors de la suppression du message : {e}")
+                        print(f"⚠️ Erreur lors de la suppression du message : {e}")
                     
                     # Envoie le nouveau message avec les liens d'affiliation
                     try:
                         await message.channel.send(
                             f"💫 **{author_name}** a partagé :\n{links_message}"
                         )
+                        print("✅ Nouveau message envoyé avec succès")
                     except Exception as e:
-                        print(f"Erreur lors de l'envoi du nouveau message : {e}")
+                        print(f"❌ Erreur lors de l'envoi du nouveau message : {e}")
                         # Message de fallback en cas d'erreur
                         await message.channel.send(
                             f"🛒 Voici les liens :\n{links_message}"
                         )
+                else:
+                    print("⚠️ Aucun lien d'affiliation généré")
                         
             except Exception as e:
-                print(f"Erreur lors du traitement des liens : {e}")
+                print(f"❌ Erreur lors du traitement des liens : {e}")
         else:
             # Si pas d'URLs Amazon, traite les autres commandes
             await self.process_commands(message)
